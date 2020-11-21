@@ -9,9 +9,9 @@ int inputDataPin = 5;
 int inputClockPin = 6;
 int inputLatchPin = 7;
 
-int outputDataPin = 2;
-int outputClockPin = 3;
-int outputLatchPin = 4;
+int outputDataPin = 8;
+int outputClockPin = 9;
+int outputLatchPin = 10;
 
 unsigned long startMs;
 int maxCounterSecs = 180;
@@ -53,7 +53,7 @@ static const Maze MAZES[] = {
 // --- Main functions ---
 void setup() {
   Serial.begin(9600);
-  
+
   pinMode(inputDataPin, INPUT);
   pinMode(inputClockPin, OUTPUT);
   pinMode(inputLatchPin, OUTPUT);
@@ -75,7 +75,7 @@ void setup() {
 
 void loop() {
   handleModules();
-    
+
   delay(10);
 }
 
@@ -95,13 +95,13 @@ void handleModules() {
     // Add modules here
     switch (moduleId) {
       case 1: {  // Timer
-        handleTimer(value);
-        break;
-      }
+          handleTimer(value);
+          break;
+        }
       case 2: {  // Maze
-        handleMaze(value);
-        break;
-      }
+          handleMaze(value);
+          break;
+        }
       default:
         Serial.print("Unknown module: "); Serial.println(moduleId);
         break;
@@ -144,7 +144,7 @@ void handleTimer(byte value) {
     if (numToWrite < 10) {
       timerDisplay.writeDigitNum(3, 0);
     }
-    timerDisplay.drawColon(true);  
+    timerDisplay.drawColon(true);
   } else {
     bool secondsChanged = (timerSecs != lastTimerSecs);
     lastTimerSecs = timerSecs;
@@ -153,7 +153,7 @@ void handleTimer(byte value) {
       for (int i = 0; i < 5; ++i) {
         timerDisplay.writeDigitNum(i, 0);
       }
-      timerDisplay.drawColon(true);  
+      timerDisplay.drawColon(true);
     } else {
       timerDisplay.clear();
     }
@@ -175,11 +175,11 @@ uint8_t pointToId(uint8_t x, uint8_t y) {
 }
 
 // Main maze functions
-void drawMaze(const Maze* m){
+void drawMaze(const Maze* m) {
   mazeDisplay.clear();
   mazeDisplay.drawBitmap(0, 0, MAZE_BORDER, 8, 8, LED_ON);
-  mazeDisplay.drawPixel(idToX(m->id1)+1, idToY(m->id1)+1, LED_ON);
-  mazeDisplay.drawPixel(idToX(m->id2)+1, idToY(m->id2)+1, LED_ON);
+  mazeDisplay.drawPixel(idToX(m->id1) + 1, idToY(m->id1) + 1, LED_ON);
+  mazeDisplay.drawPixel(idToX(m->id2) + 1, idToY(m->id2) + 1, LED_ON);
 }
 
 void drawMazePoints(uint8_t startX, uint8_t startY, uint8_t endX, uint8_t endY) {
@@ -187,7 +187,7 @@ void drawMazePoints(uint8_t startX, uint8_t startY, uint8_t endX, uint8_t endY) 
   startY++;
   endX++;
   endY++;
-  
+
   unsigned long nowMs = millis();
   int period = 500;
   int onTime = 250;
@@ -204,10 +204,10 @@ const Maze* maze;
 uint8_t startX, startY;
 uint8_t endX, endY;
 
-void initMazeModule(){
+void initMazeModule() {
   maze = &MAZES[0];
-  startX = 0;
-  startY = 0;
+  startX = 4;
+  startY = 5;
   endX = 5;
   endY = 5;
 }
@@ -217,7 +217,7 @@ void validateMaze(const Maze* m) {
 }
 
 bool isValidPoint(uint8_t x, uint8_t y) {
-  return (x >= 0) && (x < 6) && (y >=0) && (y < 6);
+  return (x >= 0) && (x < 6) && (y >= 0) && (y < 6);
 }
 
 bool isValidMove(const Maze* maze, uint8_t startX, uint8_t startY, uint8_t moveDirection) {
@@ -238,7 +238,7 @@ void handleMaze(byte value) {
   drawMaze(maze);
   drawMazePoints(startX, startY, endX, endY);
   mazeDisplay.writeDisplay();
-  
+
   byte buttons = value >> 4;
   bool buttonPressed[4];
   for (int i = 0; i < 4; ++i) {
