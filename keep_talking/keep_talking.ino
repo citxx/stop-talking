@@ -99,7 +99,7 @@ void handleModules() {
         break;
       }
       case 2: {  // Maze
-        handleMaze();
+        handleMaze(value);
         break;
       }
       default:
@@ -205,10 +205,32 @@ void validateMaze(const Maze& m) {
   return;
 }
 
-void handleMaze() {
+#define LEFT 0
+#define UP 1
+#define RIGHT 2
+#define DOWN 3
+
+const byte buttonShift[4] = {0, 1, 3, 2};
+int lastButtonState[4] = {1, 1, 1, 1};
+
+void handleMaze(byte value) {
   drawMaze(MAZES[0]);
   uint8_t start_x = 0, start_y = 0;
   uint8_t end_x = 5, end_y = 5;
   drawMazePoints(start_x, start_y, end_x, end_y);
   mazeDisplay.writeDisplay();
+  
+  byte buttons = value >> 4;
+  bool buttonPressed[4];
+  for (int i = 0; i < 4; ++i) {
+    int newState = (buttons >> buttonShift[i]) & 1;
+    buttonPressed[i] = (lastButtonState[i] == 0 && newState == 1);
+    lastButtonState[i] = newState;
+  }
+//  Serial.print(value, BIN); Serial.print(" "); Serial.print(buttons, BIN); Serial.println();
+//  Serial.print("Buttons: "); for (int i = 0; i < 4; ++i) Serial.print(lastButtonState[i]); Serial.println();
+  if (buttonPressed[LEFT]) Serial.println("LEFT");
+  if (buttonPressed[UP]) Serial.println("UP");
+  if (buttonPressed[RIGHT]) Serial.println("RIGHT");
+  if (buttonPressed[DOWN]) Serial.println("DOWN");
 }
