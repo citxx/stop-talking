@@ -19,7 +19,7 @@ int lastTimerSecs = 0;
 bool explodedBlinkState = true;
 
 // Structs and static constants for the Maze module
-static const uint8_t PROGMEM border[] = {
+static const uint8_t PROGMEM MAZE_BORDER[] = {
   0b11111111,
   0b10000001,
   0b10000001,
@@ -33,7 +33,7 @@ static const uint8_t PROGMEM border[] = {
 struct Maze {
   uint8_t id1;
   uint8_t id2;
-  uint8_t maze[];
+  uint8_t walls[];
 };
 
 static const Maze MAZES[] = {
@@ -69,7 +69,8 @@ void setup() {
   // Maze module setup
   mazeDisplay.begin(0x71);
   mazeDisplay.setBrightness(0);
-  validateMaze(MAZES[0]);
+  validateMaze(&MAZES[0]);
+  initMazeModule();
 }
 
 void loop() {
@@ -87,7 +88,6 @@ void handleModules() {
   digitalWrite(outputLatchPin, LOW);
   while (true) {
     byte value = shiftIn(inputDataPin, inputClockPin, MSBFIRST);
-    Serial.print(value, BIN); Serial.print(" ");
     int moduleId = value & 0xF;
     if (moduleId == 0) {
       break;
@@ -107,7 +107,6 @@ void handleModules() {
         break;
     }
   }
-  Serial.println();
   digitalWrite(outputLatchPin, HIGH);
 }
 
@@ -176,33 +175,58 @@ uint8_t pointToId(uint8_t x, uint8_t y) {
 }
 
 // Main maze functions
-void drawMaze(const Maze& m){
+void drawMaze(const Maze* m){
   mazeDisplay.clear();
-  mazeDisplay.drawBitmap(0, 0, border, 8, 8, LED_ON);
-  mazeDisplay.drawPixel(idToX(m.id1)+1, idToY(m.id1)+1, LED_ON);
-  mazeDisplay.drawPixel(idToX(m.id2)+1, idToY(m.id2)+1, LED_ON);
+  mazeDisplay.drawBitmap(0, 0, MAZE_BORDER, 8, 8, LED_ON);
+  mazeDisplay.drawPixel(idToX(m->id1)+1, idToY(m->id1)+1, LED_ON);
+  mazeDisplay.drawPixel(idToX(m->id2)+1, idToY(m->id2)+1, LED_ON);
 }
 
-void drawMazePoints(uint8_t start_x, uint8_t start_y, uint8_t end_x, uint8_t end_y) {
-  start_x++;
-  start_y++;
-  end_x++;
-  end_y++;
+void drawMazePoints(uint8_t startX, uint8_t startY, uint8_t endX, uint8_t endY) {
+  startX++;
+  startY++;
+  endX++;
+  endY++;
   
   unsigned long nowMs = millis();
   int period = 500;
   int onTime = 250;
   if (nowMs % period < onTime) {
-    mazeDisplay.drawPixel(start_x, start_y, LED_ON);
+    mazeDisplay.drawPixel(startX, startY, LED_ON);
   } else {
-    mazeDisplay.drawPixel(start_x, start_y, LED_OFF);
+    mazeDisplay.drawPixel(startX, startY, LED_OFF);
   }
-  mazeDisplay.drawPixel(end_x, end_y, LED_ON);
+  mazeDisplay.drawPixel(endX, endY, LED_ON);
   mazeDisplay.writeDisplay();
 }
 
-void validateMaze(const Maze& m) {
+const Maze* maze;
+uint8_t startX, startY;
+uint8_t endX, endY;
+
+void initMazeModule(){
+  maze = &MAZES[0];
+  startX = 0;
+  startY = 0;
+  endX = 5;
+  endY = 5;
+}
+
+void validateMaze(const Maze* m) {
   return;
+}
+
+bool isValidPoint(uint8_t x, uint8_t y) {
+  return (x >= 0) && (x < 6) && (y >=0) && (y < 6);
+}
+
+bool isValidMove(const Maze* maze, uint8_t startX, uint8_t startY, uint8_t moveDirection) {
+  uint8_t wallByte = maze->walls[startY * 3 + startX / 2];
+  Serial.print(startX); Serial.print(startY); Serial.println(moveDirection);
+  uint8_t wallBits = (wallByte >> ((1 - startX % 2) * 4)) & 0xF;
+  Serial.println(wallBits, BIN);
+  Serial.println(wallBits & (1 << (3 - moveDirection)), BIN);
+  return (wallBits & (1 << (3 - moveDirection))) == 0;
 }
 
 #define LEFT 0
@@ -214,10 +238,8 @@ const byte buttonShift[4] = {0, 1, 3, 2};
 int lastButtonState[4] = {1, 1, 1, 1};
 
 void handleMaze(byte value) {
-  drawMaze(MAZES[0]);
-  uint8_t start_x = 0, start_y = 0;
-  uint8_t end_x = 5, end_y = 5;
-  drawMazePoints(start_x, start_y, end_x, end_y);
+  drawMaze(maze);
+  drawMazePoints(startX, startY, endX, endY);
   mazeDisplay.writeDisplay();
   
   byte buttons = value >> 4;
@@ -227,10 +249,37 @@ void handleMaze(byte value) {
     buttonPressed[i] = (lastButtonState[i] == 0 && newState == 1);
     lastButtonState[i] = newState;
   }
-//  Serial.print(value, BIN); Serial.print(" "); Serial.print(buttons, BIN); Serial.println();
-//  Serial.print("Buttons: "); for (int i = 0; i < 4; ++i) Serial.print(lastButtonState[i]); Serial.println();
-  if (buttonPressed[LEFT]) Serial.println("LEFT");
-  if (buttonPressed[UP]) Serial.println("UP");
-  if (buttonPressed[RIGHT]) Serial.println("RIGHT");
-  if (buttonPressed[DOWN]) Serial.println("DOWN");
+  uint8_t dx = 0, dy = 0;
+  if (buttonPressed[LEFT]) {
+    Serial.println("LEFT");
+    if (isValidMove(maze, startX, startY, LEFT)) {
+      startX -= 1;
+    } else {
+      Serial.println("WRONG MAZE MOVE");
+    }
+  }
+  if (buttonPressed[UP]) {
+    Serial.println("UP");
+    if (isValidMove(maze, startX, startY, UP)) {
+      startY -= 1;
+    } else {
+      Serial.println("WRONG MAZE MOVE");
+    }
+  }
+  if (buttonPressed[RIGHT]) {
+    Serial.println("RIGHT");
+    if (isValidMove(maze, startX, startY, RIGHT)) {
+      startX += 1;
+    } else {
+      Serial.println("WRONG MAZE MOVE");
+    }
+  }
+  if (buttonPressed[DOWN]) {
+    Serial.println("DOWN");
+    if (isValidMove(maze, startX, startY, DOWN)) {
+      startY += 1;
+    } else {
+      Serial.println("WRONG MAZE MOVE");
+    }
+  }
 }
