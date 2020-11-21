@@ -222,10 +222,7 @@ bool isValidPoint(uint8_t x, uint8_t y) {
 
 bool isValidMove(const Maze* maze, uint8_t startX, uint8_t startY, uint8_t moveDirection) {
   uint8_t wallByte = maze->walls[startY * 3 + startX / 2];
-  Serial.print(startX); Serial.print(startY); Serial.println(moveDirection);
   uint8_t wallBits = (wallByte >> ((1 - startX % 2) * 4)) & 0xF;
-  Serial.println(wallBits, BIN);
-  Serial.println(wallBits & (1 << (3 - moveDirection)), BIN);
   return (wallBits & (1 << (3 - moveDirection))) == 0;
 }
 
@@ -282,4 +279,6 @@ void handleMaze(byte value) {
       Serial.println("WRONG MAZE MOVE");
     }
   }
+  byte solved = (startX == endX) && (startY == endY);
+  shiftOut(outputDataPin, outputClockPin, MSBFIRST, solved);
 }
